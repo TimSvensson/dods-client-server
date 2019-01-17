@@ -25,7 +25,7 @@ class ServerTestCases(unittest.TestCase):
 	def test_info_to_user(self):
 		self.assertTrue(False)
 
-	def test_ping_clinet(self):
+	def test_ping_client(self):
 		self.assertTrue(False)
 
 	def test_ping_server(self):
