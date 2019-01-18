@@ -1,14 +1,11 @@
 import socket, sys, select, logging, time
 import util
 
-# todo
-#		make log file names be unique
-logname="{}_client.log".format(time.strftime("%y%m%d_%H%M%S"))
+logname="logfile.log".format(time.strftime("D%y%m%dT%H%M%S"))
 logging.basicConfig(
 	filename=logname,
 	level=logging.DEBUG,
-	format='%(asctime)s %(levelname)s\t%(funcName)s :: %(message)s')
-
+	format='%(asctime)s %(levelname)s\t%(module)s :: %(funcName)s :: %(message)s')
 
 class Client():
 	"""
