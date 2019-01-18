@@ -1,7 +1,14 @@
-import socket, sys, select, logging
+import socket, sys, select, logging, time
 import util
 
-logging.basicConfig(filename='client.log', level=logging.DEBUG)
+# todo
+#		make log file names be unique
+logname="{}_client.log".format(time.strftime("%y%m%d_%H%M%S"))
+logging.basicConfig(
+	filename=logname,
+	level=logging.DEBUG,
+	format='%(asctime)s %(levelname)s\t%(funcName)s :: %(message)s')
+
 
 class Client():
 	"""
@@ -30,7 +37,7 @@ class Client():
 		"""
 		if recipients == None:
 			util.send_msg(self.sock, message)
-		logging.debug('Client sent a message.')
+		logging.debug('Client sent a message to {}'.format(recipients))
 		
 	def recv(self):
 		"""
