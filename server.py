@@ -7,7 +7,7 @@ TODO:
  * 
 """
 
-logname="logfile.log".format(time.strftime("D%y%m%dT%H%M%S"))
+logname="logfile_server_{}.log".format(time.strftime("D%y%m%d_%H%M%S"))
 logging.basicConfig(
 	filename=logname,
 	level=logging.DEBUG,
@@ -21,9 +21,13 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
 	override the handle() method to implement communication to the
 	client.
 	"""
+
+	clients = []
+	servers = []
 	
 	def setup(self):
 		logging.info("{} {} {}".format(self.client_address[0], self.client_address[1], "connected"))
+		self.clients.append(self.request)
 
 	def handle(self):
 		self.data = b''
@@ -33,7 +37,8 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
 			logging.debug("{}:{} wrote: {}".format(self.client_address[0], self.client_address[1], self.data))
 			try:
 				if self.data != None:
-					util.send_msg(self.request, self.data)
+					for c in self.clients:
+						util.send_msg(c, self.data)
 				else:
 					flag = False
 			except AttributeError as e:
@@ -41,17 +46,21 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
 
 	def finish(self):
 		logging.info("{} {} {}".format(self.client_address[0], self.client_address[1], "disconnected"))
+		self.clients.remove(self.request)
 
 class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
 	pass
 
-def create(ip='localhost', port=9999):
+def create(ip='localhost', port=9001):
 	return ThreadedTCPServer((ip, port), ThreadedTCPRequestHandler)
 
 def start(server=None):
 	if server == None:
 		server = create()
-	logging.info("Server running on {}:{}".format(server.server_address[0], server.server_address[1]))
+	if __name__ == "__main__":
+		print(("Server running on {}:{}".format(server.server_address[0], server.server_address[1])))
+	else:
+		logging.info("Server running on {}:{}".format(server.server_address[0], server.server_address[1]))
 	server.serve_forever()
 
 if __name__ == "__main__":

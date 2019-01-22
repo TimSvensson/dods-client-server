@@ -1,11 +1,11 @@
 import socket, sys, select, logging, time
 import util
 
-logname="logfile.log".format(time.strftime("D%y%m%dT%H%M%S"))
+logname="logfile_client_{}.log".format(time.strftime("%y%m%d_%H%M%S"))
 logging.basicConfig(
 	filename=logname,
 	level=logging.DEBUG,
-	format='%(asctime)s %(levelname)s\t%(module)s :: %(funcName)s :: %(message)s')
+	format='%(asctime)s %(levelname)s\t%(thread)d %(threadName)s\t%(module)s.%(funcName)s\t%(message)s')
 
 class Client():
 	"""
@@ -26,15 +26,13 @@ class Client():
 		self.sock = None
 		logging.debug('Client closed.')
 
-	def send(self, message, recipients=None):
+	def send(self, message):
 		"""
 		Sends the 'message' to all in clinets in 'recipients'. If 'recipients' is either an empty list or None, then the 'message' is sent to all clients.
 
 		'message' MUST be a byte object.
 		"""
-		if recipients == None:
-			util.send_msg(self.sock, message)
-		logging.debug('Client sent a message to {}'.format(recipients))
+		util.send_msg(self.sock, message)
 		
 	def recv(self):
 		"""
@@ -53,29 +51,23 @@ class Client():
 	def info(self):
 		pass
 
-
-
 if __name__ == '__main__':
 	user_input = ''
 	flag = True
 	c = None
+	c = Client(server_port=9000)
+	c.connect()
 	while flag == True:
 		user_input = input(" >>> ")
-		if user_input == "create":
-			c = Client()
-		elif user_input == "connect":
-			c.connect()
-		elif user_input == "send":
+		if user_input == "send":
 			msg = input("Message > ")
 			c.send(bytes(msg, 'utf-8'))
 		elif user_input == "recv":
 			print("recv: {}".format(str(c.recv(), 'utf-8')))
 		elif user_input == "close":
 			c.close()
-		#elif user_input == "info":
-		#	print(c.info())
 		elif user_input == "end":
 			flag = False
 		else:
-			print("commands:\ncreate, connect, send, recv, close, info, and end.")
+			print("commands:\n send, recv, close, and end.")
 	c.close()
