@@ -11,15 +11,13 @@ class Client():
 	"""
 	"""
 
-	def __init__(self, server_ip='localhost', server_port=9999):
-		self.server_ip = server_ip
-		self.server_port = server_port
+	def __init__(self):
 		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		logging.debug('Client class created.')
 
-	def connect(self):
-		self.sock.connect((self.server_ip, self.server_port))
-		logging.debug('Client conencted to server.')
+	def connect(self, ip='localhost', port=9000):
+		self.sock.connect((ip, int(port)))
+		logging.debug('Client conencted to server, {}:{}.'.format(ip, port))
 
 	def close(self):
 		self.sock.close()
@@ -54,9 +52,7 @@ class Client():
 if __name__ == '__main__':
 	user_input = ''
 	flag = True
-	c = None
-	c = Client(server_port=9000)
-	c.connect()
+	c = Client()
 	while flag == True:
 		user_input = input(" >>> ")
 		if user_input == "send":
@@ -66,8 +62,15 @@ if __name__ == '__main__':
 			print("recv: {}".format(str(c.recv(), 'utf-8')))
 		elif user_input == "close":
 			c.close()
-		elif user_input == "end":
 			flag = False
+		elif user_input == "connect":
+			ip = input(" ip\t> ")
+			port = input(" port\t> ")
+			if ip == '':
+				if port == '': c.connect()
+				else: c.connect(port=port)
+			else:
+				c.connect(ip=ip, port=port)
+				print("\tConnecting to server...")
 		else:
-			print("commands:\n send, recv, close, and end.")
-	c.close()
+			print("commands:\n connect, send, recv, and close.")

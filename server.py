@@ -22,14 +22,19 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
 	client.
 	"""
 
+	is_master = False
 	clients = []
 	servers = []
+	chat_log = []
 	
 	def setup(self):
-		logging.info("{} {} {}".format(self.client_address[0], self.client_address[1], "connected"))
+		logging.info("{}:{} {}".format(self.client_address[0], self.client_address[1], "connected"))
 		self.clients.append(self.request)
 
 	def handle(self):
+		pass
+
+	def handle_client(self):
 		self.data = b''
 		flag = True
 		while flag == True:
@@ -39,13 +44,18 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
 				if self.data != None:
 					for c in self.clients:
 						util.send_msg(c, self.data)
+						# update log
 				else:
 					flag = False
 			except AttributeError as e:
 				logging.warning("Exception in Handler: {}".format(e))
 
+	def handle_server():
+		pass
+		# send log to server
+
 	def finish(self):
-		logging.info("{} {} {}".format(self.client_address[0], self.client_address[1], "disconnected"))
+		logging.info("{}:{} {}".format(self.client_address[0], self.client_address[1], "disconnected"))
 		self.clients.remove(self.request)
 
 class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
