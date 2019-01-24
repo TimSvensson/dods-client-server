@@ -5,12 +5,20 @@ const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout
   });
-
+  
+const IP = 'localhost'
+const SPORT = 1055;
+const BPORT = 1056;
 
 function getMessage(client) {
-    rl.question('Message?', (answer) => {
+    
+    rl.question('', (answer) => {
+    if (answer == 'quit') {
+        process.exit();
+    } else {
         client.emit('message', answer);
         getMessage(client);
+    }
     });
 }
 
@@ -24,44 +32,47 @@ function getQuestion() {
 function start(answer) {
     
     if (answer == 'backup') {
-        var socketClient = io.connect("http://localhost:1055/", {
+        let ip = IP + ':' + SPORT;
+        var socketClient = io.connect('http://' + ip, {
             reconnection: true
+        });
+        
+        socketClient.on('connect', function () {
+            
+            socketClient.on('connection confirmation', function() {
+                console.log('connection confirmation\n');
+            });
+
+            socketClient.on('clientEvent', function(data, client) {
+                console.log('Server message received: ', data, client);
+            });
+            
         });
 
         var socketServer = socket.listen(1056);
 
         socketServer.on('connection', function (socket) {
             console.log('connected:', socket.client.id);
+
+            
             socket.on('message', function (data) {
                 console.log('new message from client:', data);
             });
-        
-            
-        });
-
-        socketClient.on('connect', function () {
-            console.log('connected to localhost:1055');
-            socketClient.on('clientEvent', function (data) {
-                console.log('message from the server:', data);
-                socketClient.emit('serverEvent', "thanks server! for sending '" + data + "'");
-            });
-        });
-
-        socketClient.on('test', function() {
-            console.log('test message received');
         });
 
     } else if (answer == 'client') {
-        
-        var client = io.connect("http://localhost:1056", {
+        var ip = IP + ':' + SPORT;
+        var client = io.connect('http://' + ip, {
             reconnection: true
         });
         client.on('connect', function () {
-            console.log('connected to localhost:1056');
             
-            client.on('clientEvent', function (data) {
-                console.log('message from the server:', data);
-                client.emit('serverEvent', "thanks server! for sending '" + data + "'");
+            client.on('connection confirmation', function() {
+                console.log('connection confirmation\n');
+            });
+
+            client.on('clientEvent', function(data, client) {
+                console.log('Server message received: ', data, client);
             });
             
             getMessage(client);
@@ -72,28 +83,24 @@ function start(answer) {
         var socketServer = socket.listen(1055);
         
         console.log('Listening');
-        socketServer.on('connection', (socket) => {
+        socketServer.sockets.on('connection', (socket) => {
             console.log('connected:', socket.client.id);
+
+            socket.emit('connection confirmation');
         
-            
-
-
-
-
-            socket.on('serverEvent', (data) => {
-                console.log('new message from client:', data);
+            socket.on('message', function (data) {
+                console.log('Client msg:', data);
+                socketServer.sockets.emit('clientEvent', data, socket.client.id);
             });
-            
-            socket.emit('test');
 
             socket.on('backupConnection', (adress) => {
                backupInfo = adress;
             });
-        
+            
         });
 
     } else {
-        console.log('invalid input');
+        process.exit()
     }
 }
 
