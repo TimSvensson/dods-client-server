@@ -42,8 +42,10 @@ function start(answer) {
         
         socketClient.on('connect', () => {
             
-            socketClient.on('connection confirmation', () => {
+            socketClient.on('connection confirmation', (state) => {
                 console.log('connection confirmation\n');
+                messages = state;
+                console.log(state);
             });
 
             socketClient.on('updateState', (data, client) => {
@@ -81,7 +83,13 @@ function start(answer) {
 
             client.on('disconnect', () => {
                 console.log('Disconnected');
-                process.exit();
+                let ip = IP + ':' + BPORT;
+                let client = io.connect('http://' + ip, {
+                    reconnection: true
+                });
+                client.on('connect', function () {
+                    console.log('Connected to backup\n');
+                });
             });
             
             getMessage(client);
@@ -101,7 +109,6 @@ function start(answer) {
                 let time = Date.now();
                 let entry = {time, data};
                 messages.push(entry);
-                messages.sort();
                 console.log(messages);
                 socketServer.sockets.emit('updateState', messages);
             });
