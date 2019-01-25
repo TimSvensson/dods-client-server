@@ -15,7 +15,7 @@ const BPORT = 1056;
 
 function getMessage(client) {
     
-    rl.question('', function(answer){
+    rl.question('', (answer) => {
     if (answer == 'quit') {
         process.exit();
     } else {
@@ -40,24 +40,23 @@ function start(answer) {
             reconnection: true
         });
         
-        socketClient.on('connect', function () {
+        socketClient.on('connect', () => {
             
-            socketClient.on('connection confirmation', function() {
+            socketClient.on('connection confirmation', () => {
                 console.log('connection confirmation\n');
             });
 
-            socketClient.on('updateState', function(data, client) {
+            socketClient.on('updateState', (data, client) => {
                 console.log('Server message received: ', data, client);
             });
-            
         });
 
         var socketServer = socket.listen(1056);
 
-        socketServer.on('connection', function (socket) {
+        socketServer.on('connection', (socket) => {
             console.log('connected:', socket.client.id);
 
-            socket.on('message', function (data) {
+            socket.on('message', (data) => {
                 console.log('new message from client:', data);
             });
         });
@@ -69,15 +68,20 @@ function start(answer) {
         });
         client.on('connect', function () {
             
-            client.on('connection confirmation', function(state) {
+            client.on('connection confirmation', (state) => {
                 messages = state;
                 console.log('connection confirmation\n');
                 console.log(state);
             });
 
-            client.on('updateState', function(state) {
+            client.on('updateState', (state) => {
                 console.log('Server message received: ', state);
                 messages = state;
+            });
+
+            client.on('disconnect', () => {
+                console.log('Disconnected');
+                process.exit();
             });
             
             getMessage(client);
@@ -92,7 +96,7 @@ function start(answer) {
 
             socket.emit('connection confirmation', messages);
         
-            socket.on('message', function (data) {
+            socket.on('message', (data) => {
                 console.log('Client msg:', data);
                 let time = Date.now();
                 let entry = {time, data};
