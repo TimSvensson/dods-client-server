@@ -1,6 +1,8 @@
 const readline = require('readline');
 const io = require('socket.io-client');
 const socket = require('socket.io');
+
+var messages = [];
 const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout
@@ -10,9 +12,10 @@ const IP = 'localhost'
 const SPORT = 1055;
 const BPORT = 1056;
 
+
 function getMessage(client) {
     
-    rl.question('', (answer) => {
+    rl.question('', function(answer){
     if (answer == 'quit') {
         process.exit();
     } else {
@@ -43,7 +46,7 @@ function start(answer) {
                 console.log('connection confirmation\n');
             });
 
-            socketClient.on('clientEvent', function(data, client) {
+            socketClient.on('updateState', function(data, client) {
                 console.log('Server message received: ', data, client);
             });
             
@@ -54,7 +57,6 @@ function start(answer) {
         socketServer.on('connection', function (socket) {
             console.log('connected:', socket.client.id);
 
-            
             socket.on('message', function (data) {
                 console.log('new message from client:', data);
             });
@@ -67,16 +69,18 @@ function start(answer) {
         });
         client.on('connect', function () {
             
-            client.on('connection confirmation', function() {
+            client.on('connection confirmation', function(state) {
+                messages = state;
                 console.log('connection confirmation\n');
+                console.log(state);
             });
 
-            client.on('clientEvent', function(data, client) {
-                console.log('Server message received: ', data, client);
+            client.on('updateState', function(state) {
+                console.log('Server message received: ', state);
+                messages = state;
             });
             
             getMessage(client);
-
         });
 
     } else if (answer == 'server') {
@@ -86,20 +90,21 @@ function start(answer) {
         socketServer.sockets.on('connection', (socket) => {
             console.log('connected:', socket.client.id);
 
-            socket.emit('connection confirmation');
+            socket.emit('connection confirmation', messages);
         
             socket.on('message', function (data) {
                 console.log('Client msg:', data);
-                socketServer.sockets.emit('clientEvent', data, socket.client.id);
+                let time = Date.now();
+                let entry = {time, data};
+                messages.push(entry);
+                messages.sort();
+                console.log(messages);
+                socketServer.sockets.emit('updateState', messages);
             });
-
-            socket.on('backupConnection', (adress) => {
-               backupInfo = adress;
-            });
-            
         });
 
     } else {
+        console.log('Wrong input, try again.')
         process.exit()
     }
 }
