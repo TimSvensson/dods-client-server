@@ -14,6 +14,7 @@ var BPORT = 1056;
 var MODE;
 
 function getMessage(client) {
+    console.log('getMessage has client id: ', client.id);
     
     rl.question('', (answer) => {
     if (answer == 'quit') {
@@ -63,42 +64,41 @@ function startServer(port) {
             console.log('Connection closed by ' + socket.client.id);
         });
     });
-
-
 }
 
 function startClient(port) {
     var ip = IP + ':' + port;
-        var client = io.connect('http://' + ip, {
-            reconnection: true
+    var client = io.connect('http://' + ip, {
+        reconnection: false
+    });
+
+    client.on('connect', function () {
+        console.log('Just connected, here is id: ', client.id);
+        getMessage(client);
+        client.on('connection confirmation', (state, bport) => {
+            localState = state;
+            BPORT = bport;
+            console.log('connection confirmation\n');
+            console.log(localState, BPORT);
         });
 
-        client.on('connect', function () {
-            
-            client.on('connection confirmation', (state, bport) => {
-                localState = state;
-                BPORT = bport;
-                console.log('connection confirmation\n');
-                console.log(localState, BPORT);
-            });
-
-            client.on('updateState', (state) => {
-                console.log('Server message received: ', state);
-                localState = state;
-            });
-
-            client.on('disconnect', () => {
-                if (MODE == 'backup') {
-                    console.log('Disconnected from server');    
-                } else {
-                    console.log('Disconnected from server');
-                    startClient(BPORT);
-                }
-            });
-            
-            getMessage(client);
+        client.on('updateState', (state) => {
+            console.log('Server message received: ', state);
+            localState = state;
         });
+
+        client.on('disconnect', () => {
+            if (MODE == 'backup') {
+                console.log('Disconnected from server');    
+                client.close();
+            } else {
+                console.log('Disconnected from server, trying backup');
+                startClient(BPORT);
+            }
+        });
+    });
 }
+
 
 function start(answer) {
     
@@ -108,6 +108,7 @@ function start(answer) {
             startServer(port);
             startClient(SPORT);
         });
+
     } else if (answer == 'client') {
         MODE = 'client';
         rl.question('Select port ', (port) => {
