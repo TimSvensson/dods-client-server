@@ -14,9 +14,7 @@ var BPORT = 1056;
 var MODE;
 var globalClientBackup;
 
-function getMessage(client) {
-    console.log('getMessage has client id: ', client.id);
-    
+function getMessage() {
     rl.question('', (answer) => {
     if (answer == 'quit') {
         process.exit();
@@ -82,7 +80,6 @@ function startClient(port) {
             console.log('connection confirmation\n');
             console.log(localState, BPORT);
             globalClientBackup = client;
-            console.log('globalClientBackup: ', globalClientBackup);
         });
 
         client.on('updateState', (state) => {
@@ -100,7 +97,7 @@ function startClient(port) {
             }
         });
         
-        getMessage(client);
+        getMessage();
     });
 }
 
