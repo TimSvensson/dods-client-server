@@ -76,7 +76,6 @@ function startClient(port) {
     client.on('connect', () => {
         console.log('Just connected, here is id: ', client.id);
         
-        getMessage(client);
         client.on('connection confirmation', (state, bport) => {
             localState = state;
             BPORT = bport;
@@ -100,6 +99,8 @@ function startClient(port) {
                 startClient(BPORT);
             }
         });
+        
+        getMessage(client);
     });
 }
 
