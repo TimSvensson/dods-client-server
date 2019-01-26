@@ -12,6 +12,7 @@ const IP = 'localhost'
 const SPORT = 1055;
 var BPORT = 1056;
 var MODE;
+var globalClientBackup;
 
 function getMessage(client) {
     console.log('getMessage has client id: ', client.id);
@@ -20,8 +21,8 @@ function getMessage(client) {
     if (answer == 'quit') {
         process.exit();
     } else {
-        client.emit('message', answer);
-        getMessage(client);
+        globalClientBackup.emit('message', answer);
+        getMessage(globalClientBackup);
     }
     });
 }
@@ -67,19 +68,22 @@ function startServer(port) {
 }
 
 function startClient(port) {
-    var ip = IP + ':' + port;
-    var client = io.connect('http://' + ip, {
+    let ip = IP + ':' + port;
+    let client = io.connect('http://' + ip, {
         reconnection: false
     });
 
-    client.on('connect', function () {
+    client.on('connect', () => {
         console.log('Just connected, here is id: ', client.id);
+        
         getMessage(client);
         client.on('connection confirmation', (state, bport) => {
             localState = state;
             BPORT = bport;
             console.log('connection confirmation\n');
             console.log(localState, BPORT);
+            globalClientBackup = client;
+            console.log('globalClientBackup: ', globalClientBackup);
         });
 
         client.on('updateState', (state) => {
