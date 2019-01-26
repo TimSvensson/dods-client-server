@@ -2,7 +2,7 @@ const readline = require('readline');
 const io = require('socket.io-client');
 const socket = require('socket.io');
 
-var messages = [];
+var localState = [];
 const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout
@@ -10,8 +10,8 @@ const rl = readline.createInterface({
   
 const IP = 'localhost'
 const SPORT = 1055;
-const BPORT = 1056;
-
+var BPORT = 1056;
+var MODE;
 
 function getMessage(client) {
     
@@ -26,93 +26,97 @@ function getMessage(client) {
 }
 
 function getQuestion() {
-    rl.question('Select mode ', (answer) => {
-        console.log(`Thank you for your valuable feedback: ${answer}`);
+    rl.question('Select mode: server, backup or client ', (answer) => {
         start(answer);
     });
+}
+
+function startServer(port) {
+    var socketServer = socket.listen(port);
+        
+    console.log('Listening on port ' + port);
+
+    socketServer.sockets.on('connection', (socket) => {
+        console.log('Connected:', socket.client.id);
+
+        socket.emit('connection confirmation', localState, BPORT);
+    
+        if (MODE == 'backup') {
+            socket.emit('bport', BPORT);
+        }
+
+        socket.on('bport', (bport) => {
+            BPORT = bport;
+            console.log('Got backup port', BPORT);
+        });    
+
+        socket.on('message', (data) => {
+            console.log('Client msg:', data);
+            let time = Date.now();
+            let entry = {time, data};
+            localState.push(entry);
+            console.log(localState);
+            socketServer.sockets.emit('updateState', localState);
+        });
+
+        socket.on('disconnect', () => {
+            console.log('Connection closed by ' + socket.client.id);
+        });
+    });
+
+
+}
+
+function startClient(port) {
+    var ip = IP + ':' + port;
+        var client = io.connect('http://' + ip, {
+            reconnection: true
+        });
+
+        client.on('connect', function () {
+            
+            client.on('connection confirmation', (state, bport) => {
+                localState = state;
+                BPORT = bport;
+                console.log('connection confirmation\n');
+                console.log(localState, BPORT);
+            });
+
+            client.on('updateState', (state) => {
+                console.log('Server message received: ', state);
+                localState = state;
+            });
+
+            client.on('disconnect', () => {
+                if (MODE == 'backup') {
+                    console.log('Disconnected from server');    
+                } else {
+                    console.log('Disconnected from server');
+                    startClient(BPORT);
+                }
+            });
+            
+            getMessage(client);
+        });
 }
 
 function start(answer) {
     
     if (answer == 'backup') {
-        let ip = IP + ':' + SPORT;
-        var socketClient = io.connect('http://' + ip, {
-            reconnection: true
+        MODE = 'backup';
+        rl.question('Select port for backup', (port) => {
+            startServer(port);
+            startClient(SPORT);
         });
-        
-        socketClient.on('connect', () => {
-            
-            socketClient.on('connection confirmation', (state) => {
-                console.log('connection confirmation\n');
-                messages = state;
-                console.log(state);
-            });
-
-            socketClient.on('updateState', (data, client) => {
-                console.log('Server message received: ', data, client);
-            });
-        });
-
-        var socketServer = socket.listen(1056);
-
-        socketServer.on('connection', (socket) => {
-            console.log('connected:', socket.client.id);
-
-            socket.on('message', (data) => {
-                console.log('new message from client:', data);
-            });
-        });
-
     } else if (answer == 'client') {
-        var ip = IP + ':' + SPORT;
-        var client = io.connect('http://' + ip, {
-            reconnection: true
-        });
-        client.on('connect', function () {
-            
-            client.on('connection confirmation', (state) => {
-                messages = state;
-                console.log('connection confirmation\n');
-                console.log(state);
-            });
-
-            client.on('updateState', (state) => {
-                console.log('Server message received: ', state);
-                messages = state;
-            });
-
-            client.on('disconnect', () => {
-                console.log('Disconnected');
-                let ip = IP + ':' + BPORT;
-                let client = io.connect('http://' + ip, {
-                    reconnection: true
-                });
-                client.on('connect', function () {
-                    console.log('Connected to backup\n');
-                });
-            });
-            
-            getMessage(client);
+        MODE = 'client';
+        rl.question('Select port ', (port) => {
+            startClient(port);
         });
 
     } else if (answer == 'server') {
-        var socketServer = socket.listen(1055);
-        
-        console.log('Listening');
-        socketServer.sockets.on('connection', (socket) => {
-            console.log('connected:', socket.client.id);
-
-            socket.emit('connection confirmation', messages);
-        
-            socket.on('message', (data) => {
-                console.log('Client msg:', data);
-                let time = Date.now();
-                let entry = {time, data};
-                messages.push(entry);
-                console.log(messages);
-                socketServer.sockets.emit('updateState', messages);
-            });
-        });
+        MODE = 'server';
+        startServer(SPORT);
 
     } else {
         console.log('Wrong input, try again.')
