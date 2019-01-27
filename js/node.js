@@ -105,12 +105,14 @@ function startClient(port) {
                 startClient(SPORT);
             }
         });
+        if (MODE != 'backup') {
+            setInterval(() => {
+                client.emit('message', Math.random());
+            }, 200);
+            
+        }
         
-        setInterval(() => {
-            client.emit('message', Math.random());
-        }, 2000);
-        
-        getMessage();
+        // getMessage();
     });
 }
 
