@@ -9,8 +9,8 @@ const rl = readline.createInterface({
   });
   
 const IP = 'localhost'
-const SPORT = 1055;
-var BPORT = 1056;
+var SPORT = 1055;
+var BPORT = undefined;
 var MODE;
 var globalClientBackup;
 
@@ -21,8 +21,7 @@ function getMessage() {
     } else {
         globalClientBackup.emit('message', answer);
         getMessage(globalClientBackup);
-    }
-    });
+    }});
 }
 
 function getQuestion() {
@@ -51,12 +50,11 @@ function startServer(port) {
         });    
 
         socket.on('message', (data) => {
-            console.log('Client msg:', data);
             let time = Date.now();
             let entry = {time, data};
             localState.push(entry);
-            console.log(localState);
-            socketServer.sockets.emit('updateState', localState);
+            console.log(entry);
+            socket.broadcast.emit('updateState', localState);
         });
 
         socket.on('disconnect', () => {
@@ -66,9 +64,11 @@ function startServer(port) {
 }
 
 function startClient(port) {
-    let ip = IP + ':' + port;
+    SPORT = port;
+    let ip = IP + ':' + SPORT;
     let client = io.connect('http://' + ip, {
-        reconnection: false
+        reconnection: false,
+        
     });
 
     client.on('connect', () => {
@@ -76,57 +76,82 @@ function startClient(port) {
         
         client.on('connection confirmation', (state, bport) => {
             localState = state;
-            BPORT = bport;
-            console.log('connection confirmation\n');
-            console.log(localState, BPORT);
+
+            if (bport != undefined) {
+                BPORT = bport;
+            }
+
+            console.log('connection confirmed\n');
             globalClientBackup = client;
         });
 
+        if (MODE == 'backup') {
+            client.emit('bport', BPORT);
+        }
+
         client.on('updateState', (state) => {
-            console.log('Server message received: ', state);
             localState = state;
+            console.log(localState);
         });
 
         client.on('disconnect', () => {
+            SPORT = BPORT;
+            BPORT = undefined;
+            
             if (MODE == 'backup') {
                 console.log('Disconnected from server');    
-                client.close();
             } else {
                 console.log('Disconnected from server, trying backup');
-                startClient(BPORT);
+                startClient(SPORT);
             }
         });
+        
+        setInterval(() => {
+            client.emit('message', Math.random());
+        }, 2000);
         
         getMessage();
     });
 }
 
+/*
+    User can give backup port if it should be backup server, or give no port for it to just be a server
+
+
+*/
 
 function start(answer) {
     
     if (answer == 'backup') {
         MODE = 'backup';
-        rl.question('Select port for backup', (port) => {
-            startServer(port);
-            startClient(SPORT);
+        rl.question('Select port for backup\n', (port) => {
+            BPORT = port;
+            rl.question('Select server port to connect to\n', (serverPort) => {
+                SPORT = serverPort;
+                startServer(port);
+                startClient(SPORT);
+            });
+            
         });
 
     } else if (answer == 'client') {
         MODE = 'client';
-        rl.question('Select port ', (port) => {
+        rl.question('Select port\n', (port) => {
             startClient(port);
         });
 
     } else if (answer == 'server') {
         MODE = 'server';
-        startServer(SPORT);
+        rl.question('Select port for server\n', (port) => {
+            SPORT = port;
+            startServer(port);
+        });
 
     } else {
         console.log('Wrong input, try again.')
         process.exit()
     }
 }
-
 
 function main() {
     getQuestion();
