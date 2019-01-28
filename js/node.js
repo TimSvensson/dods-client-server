@@ -1,16 +1,15 @@
 const readline = require('readline');
 const io = require('socket.io-client');
 const socket = require('socket.io');
-
-var localState = [];
 const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout
-  });
-  
+});
 const IP = 'localhost'
+
+var localState = [];
 var SPORT = 1055;
-var BPORT = undefined;
+var BPORT = 1056;
 var MODE;
 var globalClientBackup;
 
@@ -38,16 +37,17 @@ function startServer(port) {
     socketServer.sockets.on('connection', (socket) => {
         console.log('Connected:', socket.client.id);
 
-        socket.emit('connection confirmation', localState, BPORT);
+        socket.emit('connection confirmation', localState);
     
-        if (MODE == 'backup') {
-            socket.emit('bport', BPORT);
-        }
+        // if (MODE == 'backup') {
+        //     console.log('BPORT')
+        //     socket.emit('bport', BPORT);
+        // }
 
-        socket.on('bport', (bport) => {
-            BPORT = bport;
-            console.log('Got backup port', BPORT);
-        });    
+        // socket.on('bport', (bport) => {
+        //     BPORT = bport;
+        //     console.log('Got backup port', BPORT);
+        // });    
 
         socket.on('message', (data) => {
             let time = Date.now();
@@ -64,34 +64,32 @@ function startServer(port) {
 }
 
 function startClient(port) {
-    SPORT = port;
-    let ip = IP + ':' + SPORT;
-    let client = io.connect('http://' + ip, {
-        reconnection: false,
-        
-    });
+    // SPORT = port;
+    let ip = IP + ':' + port;
+    let client = io.connect('http://' + ip);
 
     client.on('connect', () => {
-        console.log('Just connected, here is id: ', client.id);
         
-        client.on('connection confirmation', (state, bport) => {
+        client.on('connection confirmation', (state) => {
             localState = state;
 
-            if (bport != undefined) {
-                BPORT = bport;
-            }
+            // if (bport != undefined) {
+            //     BPORT = bport;
+            // }
 
             console.log('connection confirmed\n');
             globalClientBackup = client;
         });
 
-        if (MODE == 'backup') {
-            client.emit('bport', BPORT);
-        }
+        // if (MODE == 'backup') {
+        //     client.emit('bport', BPORT);
+        // }
 
         client.on('updateState', (state) => {
             localState = state;
-            console.log(localState);
+            if (MODE == 'client') {
+                console.log(localState.slice(-1)[0]);
+            }
         });
 
         client.on('disconnect', () => {
@@ -112,26 +110,20 @@ function startClient(port) {
             
         }
         
-        // getMessage();
+        getMessage();
     });
 }
-
-/*
-    User can give backup port if it should be backup server, or give no port for it to just be a server
-
-
-*/
 
 function start(answer) {
     
     if (answer == 'backup') {
         MODE = 'backup';
         rl.question('Select port for backup\n', (port) => {
-            BPORT = port;
+            // BPORT = port;
             rl.question('Select server port to connect to\n', (serverPort) => {
-                SPORT = serverPort;
+                // SPORT = serverPort;
                 startServer(port);
-                startClient(SPORT);
+                startClient(serverPort);
             });
             
         });
@@ -145,13 +137,13 @@ function start(answer) {
     } else if (answer == 'server') {
         MODE = 'server';
         rl.question('Select port for server\n', (port) => {
-            SPORT = port;
+            // SPORT = port;
             startServer(port);
         });
 
     } else {
-        console.log('Wrong input, try again.')
-        process.exit()
+        console.log('Wrong input, try again.');
+        process.exit();
     }
 }
 
