@@ -8,8 +8,8 @@ const rl = readline.createInterface({
 const IP = 'localhost'
 
 var localState = [];
-var SPORT = 1055;
-var BPORT = 1056;
+var SPORT;
+var BPORT;
 var MODE;
 var globalClientBackup;
 
@@ -43,23 +43,18 @@ function startServer(port) {
     socketServer.sockets.on('connection', (socket) => {
         console.log('Connected:', socket.client.id);
 
-        socket.emit('connection confirmation', localState, BPORT);
-    
-        if (MODE == 'backup') {
-            console.log('BPORT');
-            socket.emit('bport', BPORT);
-        }
-
         socket.on('bport', (bport) => {
             BPORT = bport;
-        });    
+            socketServer.emit('bport', bport);
+        });
+
+        socket.emit('connection confirmation', localState, BPORT);
 
         socket.on('message', (data) => {
             let time = Date.now();
-            let entry = {_prints, time, data};
-            _prints+=1;
+            let entry = {time, data};
             localState.push(entry);
-            console.log(entry);
+            console.log(localState);
             socket.broadcast.emit('updateState', localState);
             
         });
@@ -73,26 +68,33 @@ function startServer(port) {
 function startClient(port) {
     let ip = IP + ':' + port;
     console.log('ip', ip)
-    let client = io.connect('http://' + ip);
+    let client = io.connect('http://' + ip, {
+        reconnection : false
+    });
 
     client.on('connect', () => {
         
+        if (MODE == 'backup') {
+            client.emit('bport', BPORT);
+        }
+
         client.on('connection confirmation', (state, bport) => {
             localState = state;
-            BPORT = bport;
-           
-            console.log('connection confirmed\n');
             globalClientBackup = client;
+            BPORT = bport;
         });
-
-        // if (MODE == 'backup') {
-        //     client.emit('bport', BPORT);
-        // }
 
         client.on('updateState', (state) => {
             localState = state;
             if (MODE == 'client') {
-                console.log(localState.slice(-1)[0]);
+                console.log(localState);
+                // console.log(localState.slice(-1)[0]);
+            }
+        });
+
+        client.on('bport', (bport) => {
+            if (MODE == 'client') {
+                BPORT = bport;
             }
         });
 
@@ -107,12 +109,6 @@ function startClient(port) {
                 startClient(SPORT);
             }
         });
-        if (MODE == 'client') {
-            setInterval(() => {
-                client.emit('message', Math.random());
-            }, 200);
-            console.log('outside of interval')
-        }
         
         getMessage();
     });
@@ -122,28 +118,28 @@ function start(answer) {
     
     if (answer == 'backup') {
         MODE = 'backup';
-        startServer(BPORT);
-        startClient(SPORT);
-        // rl.question('Select port for backup\n', (port) => {
-        //     // BPORT = port;
-        //     rl.question('Select server port to connect to\n', (serverPort) => {
-        //         // SPORT = serverPort;
-                
-        //     });
-        // });
+        rl.question('Select port for backup\n', (port) => {
+            BPORT = port;
+            rl.question('Select server port to connect to\n', (serverPort) => {
+                SPORT = serverPort;
+                startServer(BPORT);
+                startClient(SPORT);
+            });
+        });
 
     } else if (answer == 'client') {
         MODE = 'client';
-        startClient(SPORT);
-        // rl.question('Select port\n', (port) => {
-        // });
+        rl.question('Select port\n', (port) => {
+            SPORT = port;
+            startClient(SPORT);
+        });
 
     } else if (answer == 'server') {
         MODE = 'server';
-        startServer(SPORT);
-        // rl.question('Select port for server\n', (port) => {
-        //     // SPORT = port;
-        // });
+        rl.question('Select port for server\n', (port) => {
+            SPORT = port;
+            startServer(SPORT);
+        });
 
     } else {
         console.log('Wrong input, try again.');
