@@ -106,6 +106,10 @@ function startClient(port) {
                 console.log('Disconnected from server');    
             } else {
                 console.log('Disconnected from server, trying backup');
+                if (SPORT == null) { 
+                    console.log("No backup server available, system shutdown.")
+                    process.exit();
+                }
                 startClient(SPORT);
             }
         });
